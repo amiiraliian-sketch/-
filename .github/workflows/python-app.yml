@@ -25,4 +25,4 @@ jobs:
 
       - name: Check Python syntax
         run: |
-          python -m py_compile hesabddary.py
+          python -m py_compile .github/workflows/hesabddary.py
