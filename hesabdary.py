@@ -5,13 +5,14 @@ from datetime import datetime
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, RoundedRectangle
-from kivy.metrics import dp
+from kivy.metrics import dp, sp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.textinput import TextInput
 
 
 Window.clearcolor = (0.055, 0.065, 0.08, 1)
@@ -19,9 +20,16 @@ Window.clearcolor = (0.055, 0.065, 0.08, 1)
 
 class AccountingApp(App):
 
+    # ---------------- BUILD ----------------
+
     def build(self):
-        self.db_path = os.path.join(self.user_data_dir, "accounting.db")
+        self.db_path = os.path.join(
+            self.user_data_dir,
+            "accounting.db"
+        )
+
         self.setup_database()
+
         return self.build_dashboard()
 
     # ---------------- DATABASE ----------------
@@ -40,25 +48,28 @@ class AccountingApp(App):
             )
         """)
 
-        # Add missing columns to old databases
         cur.execute("PRAGMA table_info(transactions)")
         columns = [row[1] for row in cur.fetchall()]
 
         if "category" not in columns:
             cur.execute(
-                "ALTER TABLE transactions ADD COLUMN category TEXT DEFAULT 'Other'"
+                "ALTER TABLE transactions "
+                "ADD COLUMN category TEXT DEFAULT 'Other'"
             )
 
         if "date_time" not in columns:
             cur.execute(
-                "ALTER TABLE transactions ADD COLUMN date_time TEXT"
+                "ALTER TABLE transactions "
+                "ADD COLUMN date_time TEXT"
             )
 
         cur.execute("""
             UPDATE transactions
             SET date_time = ?
             WHERE date_time IS NULL
-        """, (datetime.now().strftime("%Y-%m-%d %H:%M"),))
+        """, (
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+        ))
 
         conn.commit()
         conn.close()
@@ -101,6 +112,7 @@ class AccountingApp(App):
 
         rows = cur.fetchall()
         conn.close()
+
         return rows
 
     def get_totals(self):
@@ -109,12 +121,27 @@ class AccountingApp(App):
 
         cur.execute("""
             SELECT
-                COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0)
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN type='income' THEN amount
+                            ELSE 0
+                        END
+                    ), 0
+                ),
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN type='expense' THEN amount
+                            ELSE 0
+                        END
+                    ), 0
+                )
             FROM transactions
         """)
 
         income, expense = cur.fetchone()
+
         conn.close()
 
         return income, expense
@@ -131,7 +158,13 @@ class AccountingApp(App):
         conn.commit()
         conn.close()
 
-    def update_transaction(self, transaction_id, trans_type, amount, category):
+    def update_transaction(
+        self,
+        transaction_id,
+        trans_type,
+        amount,
+        category
+    ):
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
 
@@ -151,9 +184,15 @@ class AccountingApp(App):
 
     # ---------------- UI HELPERS ----------------
 
-    def rounded_background(self, widget, color, radius=18):
+    def rounded_background(
+        self,
+        widget,
+        color,
+        radius=18
+    ):
         with widget.canvas.before:
             Color(*color)
+
             rect = RoundedRectangle(
                 pos=widget.pos,
                 size=widget.size,
@@ -164,7 +203,10 @@ class AccountingApp(App):
             rect.pos = instance.pos
             rect.size = instance.size
 
-        widget.bind(pos=update_rect, size=update_rect)
+        widget.bind(
+            pos=update_rect,
+            size=update_rect
+        )
 
     def make_label(
         self,
@@ -181,11 +223,12 @@ class AccountingApp(App):
             halign="left",
             valign="middle"
         )
+
         label.bind(
-            size=lambda obj, value: setattr(
-                obj, "text_size", (obj.width, None)
-            )
+            size=lambda obj, value:
+            setattr(obj, "text_size", (obj.width, None))
         )
+
         return label
 
     # ---------------- DASHBOARD ----------------
@@ -210,6 +253,7 @@ class AccountingApp(App):
         root.add_widget(title)
 
         # Balance card
+
         self.balance_card = BoxLayout(
             orientation="vertical",
             padding=dp(18),
@@ -244,6 +288,7 @@ class AccountingApp(App):
         root.add_widget(self.balance_card)
 
         # Income / Expense cards
+
         stats = BoxLayout(
             spacing=dp(12),
             size_hint_y=None,
@@ -254,6 +299,7 @@ class AccountingApp(App):
             orientation="vertical",
             padding=dp(14)
         )
+
         self.rounded_background(
             self.income_card,
             (0.08, 0.20, 0.14, 1),
@@ -280,6 +326,7 @@ class AccountingApp(App):
             orientation="vertical",
             padding=dp(14)
         )
+
         self.rounded_background(
             self.expense_card,
             (0.22, 0.09, 0.10, 1),
@@ -308,6 +355,7 @@ class AccountingApp(App):
         root.add_widget(stats)
 
         # Buttons
+
         buttons = BoxLayout(
             spacing=dp(10),
             size_hint_y=None,
@@ -318,13 +366,21 @@ class AccountingApp(App):
             text="+ INCOME",
             font_size=dp(15)
         )
-        add_income.bind(on_release=lambda x: self.amount_popup("income"))
+
+        add_income.bind(
+            on_release=lambda x:
+            self.amount_popup("income")
+        )
 
         add_expense = Button(
             text="- EXPENSE",
             font_size=dp(15)
         )
-        add_expense.bind(on_release=lambda x: self.amount_popup("expense"))
+
+        add_expense.bind(
+            on_release=lambda x:
+            self.amount_popup("expense")
+        )
 
         buttons.add_widget(add_income)
         buttons.add_widget(add_expense)
@@ -332,6 +388,7 @@ class AccountingApp(App):
         root.add_widget(buttons)
 
         # Recent title
+
         recent_title = Label(
             text="RECENT TRANSACTIONS",
             font_size=dp(16),
@@ -344,16 +401,24 @@ class AccountingApp(App):
         root.add_widget(recent_title)
 
         # Recent transactions
-        self.transactions_box = BoxLayout(
-            orientation="vertical",
-            spacing=dp(8)
+
+        self.transactions_box = GridLayout(
+            cols=1,
+            spacing=dp(8),
+            size_hint_y=None
+        )
+
+        self.transactions_box.bind(
+            minimum_height=self.transactions_box.setter("height")
         )
 
         scroll = ScrollView()
         scroll.add_widget(self.transactions_box)
+
         root.add_widget(scroll)
 
         # View all
+
         view_all = Button(
             text="VIEW ALL TRANSACTIONS",
             size_hint_y=None,
@@ -361,7 +426,9 @@ class AccountingApp(App):
             font_size=dp(14)
         )
 
-        view_all.bind(on_release=self.show_all_transactions)
+        view_all.bind(
+            on_release=self.show_all_transactions
+        )
 
         root.add_widget(view_all)
 
@@ -374,6 +441,7 @@ class AccountingApp(App):
     def update_dashboard(self):
 
         income, expense = self.get_totals()
+
         balance = income - expense
 
         self.balance_label.text = f"{balance:,.0f}"
@@ -388,9 +456,13 @@ class AccountingApp(App):
             empty = Label(
                 text="No transactions yet",
                 color=(0.55, 0.58, 0.65, 1),
-                font_size=dp(15)
+                font_size=dp(15),
+                size_hint_y=None,
+                height=dp(50)
             )
+
             self.transactions_box.add_widget(empty)
+
             return
 
         for row in rows:
@@ -402,9 +474,20 @@ class AccountingApp(App):
 
     # ---------------- TRANSACTION ROW ----------------
 
-    def add_transaction_row(self, container, row, compact=False):
+    def add_transaction_row(
+        self,
+        container,
+        row,
+        compact=False
+    ):
 
-        transaction_id, trans_type, amount, category, date_time = row
+        (
+            transaction_id,
+            trans_type,
+            amount,
+            category,
+            date_time
+        ) = row
 
         row_box = BoxLayout(
             orientation="horizontal",
@@ -517,12 +600,21 @@ class AccountingApp(App):
         selected = ["Other"]
 
         for category in categories:
-            btn = Button(text=category)
 
-            def select_category(instance, c=category):
+            btn = Button(
+                text=category
+            )
+
+            def select_category(
+                instance,
+                c=category
+            ):
                 selected[0] = c
 
-            btn.bind(on_release=select_category)
+            btn.bind(
+                on_release=select_category
+            )
+
             category_buttons.add_widget(btn)
 
         save_btn = Button(
@@ -536,7 +628,12 @@ class AccountingApp(App):
         layout.add_widget(save_btn)
 
         popup = Popup(
-            title="Add Income" if trans_type == "income" else "Add Expense",
+            title=(
+                "Add Income"
+                if trans_type == "income"
+                else
+                "Add Expense"
+            ),
             content=layout,
             size_hint=(0.9, 0.65)
         )
@@ -544,7 +641,9 @@ class AccountingApp(App):
         def save(instance):
 
             try:
-                amount = float(amount_input.text)
+                amount = float(
+                    amount_input.text
+                )
 
                 if amount <= 0:
                     return
@@ -556,12 +655,15 @@ class AccountingApp(App):
                 )
 
                 popup.dismiss()
+
                 self.update_dashboard()
 
-            except:
+            except (ValueError, TypeError):
                 pass
 
-        save_btn.bind(on_release=save)
+        save_btn.bind(
+            on_release=save
+        )
 
         popup.open()
 
@@ -569,7 +671,13 @@ class AccountingApp(App):
 
     def edit_popup(self, row):
 
-        transaction_id, trans_type, amount, category, date_time = row
+        (
+            transaction_id,
+            trans_type,
+            amount,
+            category,
+            date_time
+        ) = row
 
         layout = BoxLayout(
             orientation="vertical",
@@ -593,15 +701,28 @@ class AccountingApp(App):
             spacing=dp(8)
         )
 
-        income_btn = Button(text="Income")
-        expense_btn = Button(text="Expense")
+        income_btn = Button(
+            text="Income"
+        )
+
+        expense_btn = Button(
+            text="Expense"
+        )
 
         income_btn.bind(
-            on_release=lambda x: selected_type.__setitem__(0, "income")
+            on_release=lambda x:
+            selected_type.__setitem__(
+                0,
+                "income"
+            )
         )
 
         expense_btn.bind(
-            on_release=lambda x: selected_type.__setitem__(0, "expense")
+            on_release=lambda x:
+            selected_type.__setitem__(
+                0,
+                "expense"
+            )
         )
 
         type_buttons.add_widget(income_btn)
@@ -624,11 +745,17 @@ class AccountingApp(App):
         )
 
         for c in categories:
-            btn = Button(text=c)
+
+            btn = Button(
+                text=c
+            )
 
             btn.bind(
                 on_release=lambda x, value=c:
-                selected_category.__setitem__(0, value)
+                selected_category.__setitem__(
+                    0,
+                    value
+                )
             )
 
             category_buttons.add_widget(btn)
@@ -653,7 +780,9 @@ class AccountingApp(App):
         def save(instance):
 
             try:
-                new_amount = float(amount_input.text)
+                new_amount = float(
+                    amount_input.text
+                )
 
                 if new_amount <= 0:
                     return
@@ -666,12 +795,15 @@ class AccountingApp(App):
                 )
 
                 popup.dismiss()
+
                 self.update_dashboard()
 
-            except:
+            except (ValueError, TypeError):
                 pass
 
-        save_btn.bind(on_release=save)
+        save_btn.bind(
+            on_release=save
+        )
 
         popup.open()
 
@@ -696,8 +828,13 @@ class AccountingApp(App):
             height=dp(48)
         )
 
-        yes = Button(text="DELETE")
-        no = Button(text="CANCEL")
+        yes = Button(
+            text="DELETE"
+        )
+
+        no = Button(
+            text="CANCEL"
+        )
 
         buttons.add_widget(no)
         buttons.add_widget(yes)
@@ -716,11 +853,18 @@ class AccountingApp(App):
         )
 
         def delete(instance):
-            self.delete_transaction(transaction_id)
+
+            self.delete_transaction(
+                transaction_id
+            )
+
             popup.dismiss()
+
             self.update_dashboard()
 
-        yes.bind(on_release=delete)
+        yes.bind(
+            on_release=delete
+        )
 
         popup.open()
 
@@ -750,43 +894,4 @@ class AccountingApp(App):
             size_hint_y=None
         )
 
-        transaction_box.bind(
-            minimum_height=transaction_box.setter("height")
-        )
-
-        if not rows:
-            transaction_box.add_widget(
-                Label(
-                    text="No transactions",
-                    size_hint_y=None,
-                    height=dp(60)
-                )
-            )
-        else:
-            for row in rows:
-                self.add_transaction_row(
-                    transaction_box,
-                    row,
-                    compact=False
-                )
-
-        scroll.add_widget(transaction_box)
-
-        main.add_widget(scroll)
-        main.add_widget(close_btn)
-
-        popup = Popup(
-            title="All Transactions",
-            content=main,
-            size_hint=(0.95, 0.9)
-        )
-
-        close_btn.bind(
-            on_release=popup.dismiss
-        )
-
-        popup.open()
-
-
-if __name__ == "__main__":
-    AccountingApp().run()
+       
