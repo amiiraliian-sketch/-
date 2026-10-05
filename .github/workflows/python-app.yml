@@ -2,7 +2,7 @@ name: Build Python App
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -23,6 +23,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install kivy
 
+      - name: Find Python files
+        run: |
+          echo "Python files in repository:"
+          find . -type f -name "*.py" -print
+
       - name: Check Python syntax
         run: |
-          python -m py_compile .github/workflows/hesabddary.py
+          find . -type f -name "*.py" -print0 | xargs -0 -n1 python -m py_compile
